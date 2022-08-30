@@ -1,0 +1,149 @@
+def transform(df):
+  #The print functions here are for checking classes and bounds.
+
+  if type(df.iloc[0][-1])==str: #If the result values are of string type, the conversion is applied.
+    df.iloc[:,-1]=le.fit_transform(df.iloc[:,-1])
+
+  for i in range(df.shape[1]-1):
+    c=statistics.stdev(df.iloc[:,i])
+    #print(c,"SD")
+    #print(df.columns[i])
+    d="1"
+    while True:
+      try:
+        v=round(np.max([t for t in df.iloc[:,i] if type(t)!=str])-c,3) #If your data is less than 10^-3, increase this 3 (rounding value).
+        
+        """
+        print("-"*15)
+        print(v,"B")
+        print(np.max([t for t in df.iloc[:,i] if type(t)!=str]),"max")
+        print(d)
+        print("-"*15)
+        """
+
+        for j,k in enumerate(df.iloc[:,i]):
+          if type(k)!=str and k>=v:
+            #print(j+1)
+            df.iloc[j,i]=d
+        d=str(int(d)+1)
+
+      except:
+        break
+
+    df.iloc[:,i]=[int(k) for t,k in enumerate(df.iloc[:,i]) if type(k)==str]
+  return df
+
+
+
+
+def core(df):
+
+  df=transform(df)
+
+  """
+  #Run here if there is no *ID* column in the dataset.
+  df.insert(0,"ID",np.arange(1,df.shape[0]+1))
+  df.reset_index(inplace=True,drop=True)
+  print(df.head())
+  """  
+	
+  X=set()
+  for i in range(int(df.iloc[0,0])-1,int(df.iloc[-1,0])):#range(df.shape[0]+1):
+    if int(df.iloc[i,-1])==0: #Selected result
+      X.add(df.iloc[i,0])
+
+  U=df.iloc[:,0].values #df["ID"].values 
+  T=[]
+  BD_sd=[]
+  RLA_sd=[]
+  UR_sd=[]
+  
+
+  for i in range(df.shape[1]-1):
+    cl_l=[i for i in range(1,df.shape[1]-1)]
+    try:
+      cl_l.remove(i)
+      print(f"{df.columns[1:-1][i-1]} column is omitted")
+    except:
+      pass
+      print("Use all columns")
+
+    ##Equivalence Classes
+    pre_U_R=[]
+    c=3
+    k=1
+    for i in range(df.shape[0]):
+      for j in range(k,df.shape[0]):
+        if np.array_equal(df.iloc[i,cl_l].values,df.iloc[j,cl_l].values):
+          pre_U_R.append([df.iloc[i,0],df.iloc[j,0]])
+      k+=1 
+    
+    U_R=[]
+    for i in pre_U_R:
+      t=set()
+      for i in [j for j,t in enumerate([not set(i).isdisjoint(set(k)) for k in pre_U_R ]) if t==1]:
+        t=t.union(pre_U_R[i])
+      if t not in U_R:
+            U_R.append(t)
+    for i in U:
+      if np.array_equal([set([i]).issubset(j) for j in U_R],np.zeros(len(U_R))):
+        U_R.append(set([i]))        
+
+    ##Lower Approximation - Upper Approximation
+    Rla=[]
+    Rua=[]
+    for i in U_R:
+      if i.issubset(X):
+        [Rla.append(U[i]) for i,j in enumerate([not i.isdisjoint(set([j])) for j in U]) if (j==True) and (U[i] not in Rla)]
+      
+      if not i.isdisjoint(X):
+        [Rua.append(U[i]) for i,j in enumerate([not i.isdisjoint(set([j])) for j in U]) if (j==True) and (U[i] not in Rua)]
+    ##Lower Approximation - Upper Approximation
+
+    #Boundary
+    RLA=set(Rla)
+    RUA=set(Rua)
+    B=RUA.difference(RLA)
+    #Boundary
+  
+    
+    #print("Samples",U)
+     print("Selected Values",X)
+     print("Equivalence Classes",U_R)
+     print("Lower Approximation",Rla)
+     print("Upper Approximation",Rua)
+     print("Boundary",B)
+     print("*"*75)
+    
+
+    #T.append([U,RLA,RUA,B])
+    #T.append([RLA,RUA,B])
+    #T.append([RLA,B,U_R]) 
+
+    T.append([RLA,B])
+    
+
+  #print(T)
+
+  print("-"*75)
+  for i in range(1,len(T)):
+    rla=T[i][0].symmetric_difference(T[0][0])
+    bd=T[i][1].symmetric_difference(T[0][1])
+
+    #ur=T[i][2].symmetric_difference(T[0][2])
+
+    RLA_sd.append([df.columns[1:-1][i-1],rla,len(rla)])
+    BD_sd.append([df.columns[1:-1][i-1],bd,len(bd)])
+
+    #UR_sd.append([df.columns[1:-1][i-1],ur,len(ur)])
+
+    for j in range(len(T[i])):
+      if(not np.array_equal(T[i][j],T[0][j])):
+        print(f"{df.columns[1:-1][i-1]}-Core")
+        break
+
+  print("#"*75)
+  print(BD_sd)
+  print(RLA_sd)
+
+  #print(UR_sd)
