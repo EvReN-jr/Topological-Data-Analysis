@@ -3,8 +3,10 @@ def transform(df):
   import numpy as np
   from sklearn import preprocessing
   le = preprocessing.LabelEncoder()
-  if type(df.iloc[0][-1])==str:
-  df.iloc[:,-1]=le.fit_transform(df.iloc[:,-1])
+  
+  if type(df.iloc[0][-1])==str: #If the result values are of string type, the conversion is applied.
+    df.iloc[:,-1]=le.fit_transform(df.iloc[:,-1])
+    
   for i in range(1,df.shape[1]-1):
     c=statistics.stdev(df.iloc[:,i]) d="1"
     while True: 
@@ -22,6 +24,14 @@ def transform(df):
 
 def BD(df,shine_res=[0]):
   import numpy as np
+  df=transform(df)
+  """
+  #Run here if there is no *ID* column in the dataset.
+  df.insert(0,"ID",np.arange(1,df.shape[0]+1))
+  df.reset_index(inplace=True,drop=True)
+  print(df.head())
+  """  
+  
   X=set()
   for i in range(int(df.iloc[0,0])-1,int(df.iloc[-1,0])):
     if int(df.iloc[:,-1][i]) in shine_res:
